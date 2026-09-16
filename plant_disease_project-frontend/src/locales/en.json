@@ -1,0 +1,117 @@
+{
+  "skip": {
+    "main": "Skip to main content"
+  },
+  "app": {
+    "name": "Agrigaurd",
+    "tagline": "AI-powered crop disease detection"
+  },
+  "nav": {
+    "home": "Home",
+    "detect": "Detect",
+    "howItWorks": "How It Works",
+    "about": "About"
+  },
+  "lang": {
+    "select": "Select language",
+    "english": "English",
+    "marathi": "मराठी"
+  },
+  "hero": {
+    "title": "Check Your Crop's Health",
+    "description": "Take a photo of a crop leaf and get quick AI-powered disease detection and treatment guidance.",
+    "scanLeaf": "Scan a Leaf",
+    "learnMore": "Learn How It Works",
+    "trust": {
+      "conditions": "50+ Conditions",
+      "science": "Science-Backed",
+      "instant": "Instant Results"
+    }
+  },
+  "scanner": {
+    "title": "Check Your Leaf",
+    "subtitle": "Take a clear photo of one crop leaf.",
+    "takePhoto": "Take Photo",
+    "uploadImage": "Upload Image",
+    "cameraHint": "Use camera",
+    "galleryHint": "From gallery",
+    "or": "or",
+    "photoGuidance": "For a better result:",
+    "tips": {
+      "singleLeaf": "Keep one leaf in the photo",
+      "goodLighting": "Use good lighting",
+      "steadyCamera": "Keep the camera steady",
+      "clearVisible": "Make sure the leaf is clearly visible",
+      "avoidBlur": "Avoid blurry photos"
+    },
+    "previewTitle": "Your Leaf",
+    "chooseAnother": "Choose Another",
+    "detectDisease": "Detect Disease",
+    "analyzing": "Checking your crop...",
+    "analyzingDesc": "Our AI is carefully analyzing the leaf."
+  },
+  "result": {
+    "healthy": {
+      "title": "Leaf Looks Healthy",
+      "description": "No clear signs of disease were detected.",
+      "whatYouCanDo": "What you can do",
+      "actions": [
+        "Continue regular crop monitoring",
+        "Maintain proper watering",
+        "Check nearby plants regularly"
+      ]
+    },
+    "disease": {
+      "title": "Disease Detected",
+      "likelyDisease": "Likely Disease",
+      "confidence": "Detection confidence",
+      "treatment": "Recommended Treatment",
+      "prevention": "Prevention",
+      "important": "Important"
+    },
+    "lowConfidence": {
+      "title": "Result Uncertain",
+      "description": "The AI couldn't confidently identify the condition.",
+      "suggestion": "Try taking another clear photo of the leaf.",
+      "scanAgain": "Scan Again"
+    },
+    "scanAnother": "Scan Another Leaf"
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "steps": [
+      {
+        "title": "Take a Photo",
+        "description": "Take a clear photo of the crop leaf."
+      },
+      {
+        "title": "AI Checks the Leaf",
+        "description": "Our AI analyzes the image for possible disease signs."
+      },
+      {
+        "title": "Get Guidance",
+        "description": "See the detected disease and recommended treatment guidance."
+      }
+    ]
+  },
+  "about": {
+    "title": "About This Tool",
+    "description": "AI-assisted crop disease identification and guidance for farmers.",
+    "disclaimer": "This tool provides AI-assisted detection for informational purposes. Consult a local agricultural expert for critical decisions."
+  },
+  "crops": {
+    "title": "Supported Crops",
+    "subtitle": "Our model recognizes diseases across major crop categories"
+  },
+  "errors": {
+    "noImage": "Please select or take a photo of a leaf.",
+    "invalidImage": "Please choose a valid image file.",
+    "analysisFailed": "We couldn't analyze this image right now. Please try again.",
+    "tryAgain": "Try Again",
+    "chooseAnother": "Choose Another Image"
+  },
+  "footer": {
+    "copyright": "AI-powered crop health analysis for farmers",
+    "disclaimer": "This tool provides AI-assisted detection for informational purposes. Consult a local agricultural expert for critical decisions."
+  }
+}

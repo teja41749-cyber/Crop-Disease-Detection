@@ -1,0 +1,28 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Datasets
+datasets/
+dataset/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
