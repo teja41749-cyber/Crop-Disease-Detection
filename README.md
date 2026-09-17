@@ -235,6 +235,3 @@ The core detection pipeline is now robust against false positives. Planned next 
 
 ---
 
-## 📄 License
-
-Add your license here.
