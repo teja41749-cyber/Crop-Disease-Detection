@@ -1,155 +1,240 @@
 # 🌱 Crop Disease Detection System
 
-An AI-powered system that identifies crop diseases from leaf images and suggests remedies. Built with a **FastAPI** backend (MobileNetV2 model, 59 disease classes) and a lightweight **JavaScript (Vite)** frontend with a farmer-friendly, mobile-responsive UI supporting **English and Marathi**.
+An AI-powered crop disease detection system that identifies crop diseases from leaf images and provides remedy information.
+
+The project is designed with a **farmer-friendly, mobile-responsive interface** and currently supports **English and Marathi**.
 
 ---
 
-## 📌 How It Works
+## 📌 Project Overview
 
-```
-Leaf Image
-   ↓
-Frontend (upload / camera capture)
-   ↓
-FastAPI Backend (/predict)
-   ↓
-Image Preprocessing
-   ↓
-MobileNetV2 Model
-   ↓
-Prediction (1 of 59 classes) + Confidence + Remedy
+The system allows a user to upload or capture a crop leaf image. The image is first checked by a **leaf validation model** to confirm it is actually a plant leaf, then passed to a trained **MobileNetV2** disease model that predicts one of **59 disease classes**.
+
+### System Flow
+
+```text
+                 Farmer Uploads Image
+                         │
+                         ▼
+                ┌──────────────────┐
+                │  Leaf Validator  │
+                │    MobileNetV2   │
+                └────────┬─────────┘
+                         │
+                ┌────────┴────────┐
+                │                 │
+             NOT LEAF             LEAF
+                │                 │
+                ▼                 ▼
+             Reject        Disease Detection
+                                  │
+                                  ▼
+                         59 Disease Classes
+                                  │
+                                  ▼
+                         Confidence Check
+                           ≥ 60% / < 60%
+                                  │
+                         ┌────────┴────────┐
+                         ▼                 ▼
+                      Disease           Uncertain
+                         │
+                         ▼
+                       Remedy
 ```
 
 ---
 
-## 🗂️ Project Structure
+## ✨ Features
 
-```
-Crop-Disease-Detection/
-├── plant_disease_project-backend/
-│   ├── app.py                  # FastAPI server — the actual running backend
-│   ├── plant_disease_model.keras  # Trained model (required to run)
-│   ├── class_names.json        # List of the 59 disease classes
-│   ├── remedies.json           # Remedy text per disease class
-│   ├── requirements.txt        # Python dependencies
-│   └── (debug scripts — not part of the running app, see note below)
-│
-└── plant_disease_project-frontend/
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js          # Proxies /predict → localhost:8000 in dev
-    └── src/                    # UI code, translations, API calls
-```
+- 📷 Upload or capture a crop leaf image from a mobile-responsive web UI
+- 🍃 **Leaf/Not-Leaf validation** — rejects non-leaf images (logos, objects, people, etc.) before they ever reach the disease model
+- 🔬 Disease classification across **59 classes** using MobileNetV2 transfer learning
+- 📊 Confidence-based response: `success`, `uncertain`, or `invalid_image`
+- 💊 Remedy information for the detected disease
+- 🌐 Bilingual interface — **English** and **Marathi**
 
 ---
 
-## ✅ Prerequisites
+## 🧠 Why Leaf Validation Was Added
 
-Install these before starting:
+The original disease model is a **closed-set classifier** — it always picks the closest match among its 59 disease classes, even for images that aren't crop leaves at all.
 
-| Tool | Version | Check with |
-|---|---|---|
-| Python | 3.9 – 3.11 | `python --version` |
-| Node.js | 18+ | `node --version` |
-| npm | comes with Node | `npm --version` |
+**Example of the problem:**
 
----
-
-## 🚀 Running the Project (Step by Step)
-
-You need **two terminals open at the same time** — one for the backend, one for the frontend.
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/teja41749-cyber/Crop-Disease-Detection.git
-cd Crop-Disease-Detection
+```text
+IARE Logo → Disease Model → Mango Anthracnose — 76%   ❌ false positive
 ```
 
-### 2. Start the Backend (Terminal 1)
+The disease model only answers *"which known disease does this most resemble?"* — it was never asked *"is this even a leaf?"*. A separate binary validator now handles that question before the image reaches the disease model.
 
-```bash
-cd plant_disease_project-backend
+**Same image, after the fix:**
 
-# Create and activate a virtual environment
-python -m venv venv
-
-# Windows:
-venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the server
-uvicorn app:app --reload --port 8000
+```text
+IARE Logo → Leaf Validator → NOT_LEAF (98.52%) → Rejected   ✅
 ```
 
-✅ Backend is working if you open **http://localhost:8000** and see:
-```json
-{"status": "Plant Disease Detection API is running"}
-```
+### Validator training details
 
-**Leave this terminal running.**
-
-### 3. Start the Frontend (Terminal 2 — new terminal)
-
-```bash
-cd plant_disease_project-frontend
-
-# Install dependencies
-npm install
-
-# Run the dev server
-npm run dev
-```
-
-✅ Open the URL it prints (usually **http://localhost:5173**) in your browser.
-
-The frontend is already configured (`vite.config.js`) to forward prediction requests to the backend on port 8000 automatically — no extra setup needed as long as both servers are running.
-
-### 4. Use the App
-
-1. Open http://localhost:5173
-2. Upload or capture a leaf image
-3. The predicted disease, confidence %, and remedy will be displayed
-4. Switch language (English / Marathi) from the UI
-
----
-
-## ⚠️ Important Points Whoever Presents This Should Know
-
-**1. There is an unresolved preprocessing bug that may affect prediction accuracy.**
-`app.py` currently sends raw pixel values (0–255) straight into the model with no normalization. MobileNetV2-based models are normally trained expecting either `[0,1]` or `[-1,1]` scaled input. If the model was trained with normalized images, live predictions right now could be **less accurate than the model is actually capable of**. This was under active investigation (see `final_diagnosis.py`, `test_preprocessing.py`, `test_patterns.py` in the backend folder) but was **not confirmed fixed** as of this writing. If a professor/judge asks about accuracy or gets an odd prediction, this is the honest, technically correct answer: *"we identified a possible preprocessing mismatch during evaluation and are validating it against the training pipeline."*
-
-**2. The debug/test scripts in the backend folder are not part of the running app.**
-`check_weights.py`, `inspect_model.py`, `final_diagnosis.py`, `test_augmentation.py`, `test_patterns.py`, `test_preprocessing.py` were investigation tools used to diagnose the issue above. They're safe to ignore when just running the app — only `app.py` needs to run.
-
-**3. Low-confidence predictions are handled gracefully.**
-If the model's confidence is below 60%, the API returns a warning asking for a clearer photo instead of a possibly-wrong diagnosis. This is intentional, not a bug.
-
-**4. CORS is currently wide open (`allow_origins=["*"]`).**
-Fine for a demo/local run — flag it if anyone asks about production security, since it should be restricted before real deployment.
-
-**5. The model file (`plant_disease_model.keras`, ~24 MB) is included directly in the repo.**
-No separate download step needed — it's already there after cloning.
-
----
-
-## 🧯 Troubleshooting
-
-| Problem | Likely Fix |
+| Item | Value |
 |---|---|
-| `ModuleNotFoundError` when running backend | Make sure the virtual environment is activated before `pip install` |
-| Frontend loads but predictions fail | Confirm the backend terminal is still running on port 8000 |
-| `npm install` fails | Confirm Node.js 18+ is installed (`node --version`) |
-| Port 8000 or 5173 already in use | Close other running servers, or change the port in the run command / `vite.config.js` |
+| Model | MobileNetV2 (transfer learning, ImageNet) |
+| Input size | 128 × 128 |
+| Batch size | 32 |
+| Optimizer | Adam (lr = 0.0001) |
+| Loss | Binary Crossentropy |
+| Augmentation | Random flip, rotation, zoom, contrast |
+| Class weighting | leaf = 0.531, not_leaf = 8.518 (dataset imbalance correction) |
+
+**Dataset**
+
+| Dataset | Leaf | Not-Leaf | Total |
+|---|---:|---:|---:|
+| Train | 3,496 | 218 | 3,714 |
+| Validation | 749 | 47 | 796 |
+| Test | 750 | 47 | 797 |
+
+**Test performance**
+
+| Class | Precision | Recall | F1 |
+|---|---:|---:|---:|
+| Leaf | 1.0000 | 0.9973 | 0.9987 |
+| Not-Leaf | 0.9592 | 1.0000 | 0.9792 |
+| **Overall Accuracy** | | **99.75%** | |
+
+Out of 47 not-leaf test images, **0 were misclassified as leaf**; only 2 leaf images were misclassified as not-leaf.
 
 ---
 
-## 🛠️ Tech Stack
+## 🏗️ Project Structure
 
-- **Backend:** FastAPI, TensorFlow (Keras), Pillow, NumPy
-- **Model:** MobileNetV2 (transfer learning), 59-class classifier
-- **Frontend:** Vanilla JS + Vite, i18n (English/Marathi)
+```text
+Crop-Disease-Detection/
+│
+├── plant_disease_project-backend/
+│   ├── app.py                         ← FastAPI app (leaf validation + disease prediction)
+│   ├── leaf_validator.keras           ← NEW — binary leaf/not-leaf classifier
+│   ├── leaf_validator_classes.json    ← NEW
+│   ├── plant_disease_model.keras      ← 59-class disease model
+│   ├── class_names.json
+│   └── remedies.json
+│
+├── plant_disease_project-frontend/
+│   └── src/
+│       ├── main.js                    ← handles invalid_image / uncertain / success states
+│       └── locales/
+│           ├── en.json
+│           └── mr.json
+│
+├── .gitignore
+└── README.md
+```
+
+---
+
+## ⚙️ Backend
+
+Built with **FastAPI**. The `/predict` endpoint runs images through the leaf validator first, and only forwards leaf images to the disease model.
+
+**Response statuses**
+
+| Status | Meaning |
+|---|---|
+| `success` | Leaf detected, disease predicted with confidence ≥ 60% |
+| `uncertain` | Leaf detected, but disease confidence < 60% |
+| `invalid_image` | Image rejected — not recognized as a crop leaf |
+
+**Example rejection response**
+
+```json
+{
+  "status": "invalid_image",
+  "message": "This does not appear to be a crop leaf. Please upload a clear photo of a single crop leaf.",
+  "validation_confidence": 98.52
+}
+```
+
+---
+
+## 🖥️ Frontend
+
+The existing farmer-friendly, bilingual interface is preserved. It now also handles the `invalid_image` status by showing a clear message instead of attempting to render a disease result.
+
+- **English:** "This does not appear to be a crop leaf. Please upload a clear photo of a single crop leaf."
+- **Marathi:** "ही प्रतिमा पिकाच्या पानासारखी दिसत नाही. कृपया एका पिकाच्या पानाचा स्पष्ट फोटो अपलोड करा."
+
+---
+
+## 📥 Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/teja41749-cyber/Crop-Disease-Detection.git
+   cd Crop-Disease-Detection
+   ```
+
+2. **Backend setup**
+
+   ```bash
+   cd plant_disease_project-backend
+   pip install -r requirements.txt
+   uvicorn app:app --reload
+   ```
+
+3. **Frontend setup**
+
+   ```bash
+   cd plant_disease_project-frontend
+   npm install
+   npm run dev
+   ```
+
+> Ensure `plant_disease_model.keras`, `leaf_validator.keras`, `class_names.json`, `leaf_validator_classes.json`, and `remedies.json` are present in the backend directory before starting the server.
+
+---
+
+## ✅ Current Project Status
+
+**Core AI pipeline**
+- [x] Disease detection model (59 classes)
+- [x] Disease confidence handling
+- [x] Remedy information
+- [x] Leaf/Not-Leaf validation
+- [x] Non-leaf rejection
+- [x] Real-world false-positive fix (IARE logo test case)
+
+**Backend**
+- [x] FastAPI
+- [x] Disease model integration
+- [x] Leaf validator integration
+- [x] Updated `/predict` endpoint
+- [x] Explicit API statuses (`success` / `uncertain` / `invalid_image`)
+
+**Frontend**
+- [x] Farmer-friendly UI
+- [x] English
+- [x] Marathi
+- [x] Backend integration
+- [x] Invalid-image handling
+
+---
+
+## 🗺️ Roadmap
+
+The core detection pipeline is now robust against false positives. Planned next steps, in order of priority:
+
+1. **Weather-based disease risk + location-aware recommendations** *(next up)*
+2. Geospatial disease/pest hotspot mapping
+3. Farmer feedback and learning loop
+4. Agriculture officer / expert dashboard
+5. Localized outbreak alerts
+6. Farm/crop profile and follow-up monitoring
+7. Expert validation / referral system
+8. Offline / PWA support
+
+---
+
+## 📄 License
+
+Add your license here.
