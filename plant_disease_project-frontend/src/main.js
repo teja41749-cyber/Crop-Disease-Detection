@@ -139,11 +139,19 @@ async function handlePredict() {
   showLoading();
 
   try {
-    const data = await predictDisease(file, apiUrl);
-    showResult(data);
-  } catch (err) {
-    showError(`${t('errors.analysisFailed')} (${err.message})`);
+  const data = await predictDisease(file, apiUrl);
+
+  // Leaf validator rejected the image
+  if (data && data.status === 'invalid_image') {
+    showError(t('errors.notLeaf'));
+    return;
   }
+
+  showResult(data);
+
+} catch (err) {
+  showError(`${t('errors.analysisFailed')} (${err.message})`);
+}
 }
 
 function escapeHtml(str) {

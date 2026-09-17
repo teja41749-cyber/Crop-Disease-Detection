@@ -106,6 +106,7 @@
   "errors": {
     "noImage": "Please select or take a photo of a leaf.",
     "invalidImage": "Please choose a valid image file.",
+    "notLeaf": "This does not appear to be a crop leaf. Please upload a clear photo of a single crop leaf.",
     "analysisFailed": "We couldn't analyze this image right now. Please try again.",
     "tryAgain": "Try Again",
     "chooseAnother": "Choose Another Image"
