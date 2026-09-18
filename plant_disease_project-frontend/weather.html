@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Agrigaurd | Weather Risk</title>
+
+  <link rel="stylesheet" href="/src/styles.css">
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+  <div class="container navbar-inner">
+
+    <a href="/" class="navbar-brand">
+      <span class="navbar-title">Agrigaurd</span>
+    </a>
+
+    <nav class="navbar-nav">
+      <a href="/" class="navbar-link">Home</a>
+      <a href="/advisory.html" class="navbar-link">Advisory</a>
+      <a href="/hotspot.html" class="navbar-link">Hotspot Map</a>
+    </nav>
+
+  </div>
+
+</header>
+
+
+<main class="container" style="padding: 48px 20px;">
+
+  <header class="section-header">
+
+    <h1 class="section-title">
+      Weather Disease Risk
+    </h1>
+
+    <p class="section-subtitle">
+      Weather conditions that may increase crop disease risk.
+    </p>
+
+  </header>
+
+
+  <section class="scanner-card">
+
+    <div id="weatherStatus">
+      Loading weather...
+    </div>
+
+    <div
+      id="weatherDetails"
+      style="margin-top: 24px;"
+    ></div>
+
+  </section>
+
+</main>
+
+
+<script type="module">
+
+import {
+  getWeatherRisk
+} from '/src/api.js';
+
+
+function getLocation() {
+
+  return new Promise((resolve) => {
+
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+
+      },
+      () => resolve(null),
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 300000
+      }
+    );
+
+  });
+
+}
+
+
+async function loadWeather() {
+
+  const status =
+    document.getElementById('weatherStatus');
+
+  const details =
+    document.getElementById('weatherDetails');
+
+  try {
+
+    const location =
+      await getLocation();
+
+    const latitude =
+      location?.latitude ?? 17.608;
+
+    const longitude =
+      location?.longitude ?? 78.392;
+
+
+    const data =
+      await getWeatherRisk(
+        latitude,
+        longitude
+      );
+
+
+    status.innerHTML = `
+      <h2>
+        Disease Risk:
+        ${data.risk || 'Unknown'}
+      </h2>
+    `;
+
+
+    details.innerHTML = `
+
+      <p>
+        <strong>Temperature:</strong>
+        ${data.temperature ?? 'N/A'} °C
+      </p>
+
+      <p>
+        <strong>Relative Humidity:</strong>
+        ${data.relative_humidity ?? 'N/A'} %
+      </p>
+
+      <p>
+        <strong>Rainfall:</strong>
+        ${data.rain ?? 'N/A'} mm
+      </p>
+
+      <p>
+        <strong>Daily Precipitation:</strong>
+        ${data.precipitation_sum ?? 'N/A'} mm
+      </p>
+
+    `;
+
+  } catch (error) {
+
+    status.textContent =
+      `Unable to load weather risk: ${error.message}`;
+
+  }
+
+}
+
+
+loadWeather();
+
+</script>
+
+</body>
+</html>

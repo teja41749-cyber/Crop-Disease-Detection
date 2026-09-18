@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Agrigaurd | Advisory</title>
+
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+
+<body>
+
+<header class="navbar">
+  <div class="container navbar-inner">
+
+    <a href="/" class="navbar-brand">
+      <span class="navbar-title">Agrigaurd</span>
+    </a>
+
+    <nav class="navbar-nav">
+      <a href="/" class="navbar-link">Home</a>
+      <a href="/weather.html" class="navbar-link">Weather Risk</a>
+      <a href="/hotspot.html" class="navbar-link">Hotspot Map</a>
+    </nav>
+
+  </div>
+</header>
+
+
+<main class="container" style="padding: 48px 20px;">
+
+  <header class="section-header">
+    <h1 class="section-title">
+      Treatment & IPM Advisory
+    </h1>
+
+    <p class="section-subtitle">
+      Guidance based on your latest AI scan.
+    </p>
+  </header>
+
+
+  <section id="advisoryContent">
+
+    <div class="scanner-card">
+
+      <h2 id="diseaseName">
+        Loading...
+      </h2>
+
+      <p id="confidence"></p>
+
+      <hr>
+
+      <h3>Recommended Treatment</h3>
+      <p id="treatment">
+        Loading...
+      </p>
+
+      <h3>Prevention</h3>
+      <p id="prevention">
+        Follow integrated pest management practices.
+      </p>
+
+      <h3>Important</h3>
+      <p id="important">
+        Consult a local agricultural expert for critical decisions.
+      </p>
+
+    </div>
+
+
+    <div class="scanner-card" style="margin-top: 24px;">
+
+      <h2>Integrated Pest Management</h2>
+
+      <ul>
+        <li>Regularly inspect crop leaves.</li>
+        <li>Remove severely affected plant material where appropriate.</li>
+        <li>Maintain good field sanitation.</li>
+        <li>Use recommended cultural and biological practices.</li>
+        <li>Use chemical treatment only according to approved agricultural guidance.</li>
+      </ul>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<script type="module">
+
+const raw = sessionStorage.getItem(
+  'agrigaurd_latest_scan'
+);
+
+const diseaseName =
+  document.getElementById('diseaseName');
+
+const confidence =
+  document.getElementById('confidence');
+
+const treatment =
+  document.getElementById('treatment');
+
+if (!raw) {
+
+  diseaseName.textContent =
+    'No recent scan found';
+
+  confidence.textContent =
+    'Please return to the scanner and analyze a leaf.';
+
+} else {
+
+  const data = JSON.parse(raw);
+
+  diseaseName.textContent =
+    data.disease || 'Uncertain result';
+
+  if (data.confidence !== undefined) {
+
+    confidence.textContent =
+      `Detection confidence: ${
+        (Number(data.confidence) * 100).toFixed(1)
+      }%`;
+
+  }
+
+  treatment.textContent =
+    data.remedy ||
+    'No treatment information was returned for this result.';
+}
+
+</script>
+
+</body>
+</html>

@@ -1,12 +1,74 @@
-import { getApiUrl, predictDisease } from './api.js';
-import { init as initUi, getSelectedFile, showLoading, showError, showResult } from './ui.js';
-import { initI18n, setLang as setLocale, t } from './i18n.js';
-import { createLeafScanAnimation, createLoadingAnimation, createResultAnimation } from './animation.js';
-import { cropData, getCropIcon } from './crops.js';
+import {
+  getApiUrl,
+  predictDisease
+} from './api.js';
+
+import {
+  init as initUi,
+  getSelectedFile,
+  showLoading,
+  showError,
+  showResult
+} from './ui.js';
+
+import {
+  initI18n,
+  setLang as setLocale,
+  t
+} from './i18n.js';
+
+import {
+  createLeafScanAnimation,
+  createLoadingAnimation,
+  createResultAnimation
+} from './animation.js';
+
+import {
+  cropData,
+  getCropIcon
+} from './crops.js';
+
 
 let heroAnim = null;
 let loadingAnim = null;
 let resultAnim = null;
+
+
+/* =========================================
+   LOCATION
+   ========================================= */
+
+function getCurrentLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      () => {
+        // Location is optional.
+        resolve(null);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 300000
+      }
+    );
+  });
+}
+
+
+/* =========================================
+   MAIN INITIALIZATION
+   ========================================= */
 
 async function init() {
   await initI18n();
@@ -25,112 +87,87 @@ async function init() {
   });
 }
 
-function onFileSelected(file) {
-  console.log('File selected:', file.name, file.type, file.size);
-}
+
+/* =========================================
+   HERO ANIMATION
+   ========================================= */
 
 function initHeroAnimation() {
   const container = document.getElementById('heroAnimation');
-  if (container) {
-    heroAnim = createLeafScanAnimation(container);
+
+  if (!container) {
+    return;
   }
+
+  heroAnim = createLeafScanAnimation(container);
 }
+
+
+/* =========================================
+   LOADING ANIMATION
+   ========================================= */
 
 function startLoadingAnimation() {
-  stopAnimation(loadingAnim);
   const container = document.getElementById('loadingAnimation');
-  if (container) {
-    loadingAnim = createLoadingAnimation(container);
+
+  if (!container) {
+    return;
   }
+
+  if (loadingAnim) {
+    loadingAnim.destroy?.();
+  }
+
+  loadingAnim = createLoadingAnimation(container);
 }
+
+
+/* =========================================
+   RESULT ANIMATION
+   ========================================= */
 
 function onResultShown(data) {
-  stopAnimation(resultAnim);
   const container = document.getElementById('resultAnimation');
-  if (container) {
-    const isHealthy = data && data.disease && /healthy/i.test(data.disease);
-    resultAnim = createResultAnimation(container, !!isHealthy);
+
+  if (!container) {
+    return;
   }
-}
 
-function stopAnimation(anim) {
-  if (anim && typeof anim.destroy === 'function') {
-    anim.destroy();
+  if (resultAnim) {
+    resultAnim.destroy?.();
   }
+
+  resultAnim = createResultAnimation(container, data);
 }
 
-function initSteps() {
-  const grid = document.getElementById('stepsGrid');
-  if (!grid) return;
 
-  const fallbackSteps = [
-    { title: 'Take a Photo', description: 'Take a clear photo of the crop leaf.' },
-    { title: 'AI Checks the Leaf', description: 'Our AI analyzes the image for possible disease signs.' },
-    { title: 'Get Guidance', description: 'See the detected disease and recommended treatment guidance.' }
-  ];
+/* =========================================
+   FILE SELECTED
+   ========================================= */
 
-  const translated = t('howItWorks.steps');
-  const steps = Array.isArray(translated) && translated.length ? translated : fallbackSteps;
+function onFileSelected(file) {
+  if (!file) {
+    return;
+  }
 
-  grid.innerHTML = steps.map((step, i) => `
-    <article class="step-card">
-      <span class="step-number">${i + 1}</span>
-      <h3>${escapeHtml(step.title)}</h3>
-      <p>${escapeHtml(step.description)}</p>
-    </article>
-  `).join('');
+  console.log('Selected image:', file.name);
 }
 
-function initCrops() {
-  const grid = document.getElementById('cropsGrid');
-  if (!grid) return;
 
-  grid.innerHTML = cropData.map(crop => `
-    <article class="crop-card" role="listitem">
-      <div class="crop-icon" aria-hidden="true">
-        ${getCropIcon(crop.icon)}
-      </div>
-      <span class="crop-name">${escapeHtml(crop.name)}</span>
-    </article>
-  `).join('');
-}
-
-function initMobileMenu() {
-  const btn = document.querySelector('.mobile-menu-btn');
-  const menu = document.getElementById('mobileMenu');
-  if (!btn || !menu) return;
-
-  btn.addEventListener('click', () => {
-    const isOpen = !menu.hidden;
-    menu.hidden = isOpen;
-    btn.setAttribute('aria-expanded', String(!isOpen));
-    btn.setAttribute('aria-label', isOpen ? 'Open menu' : 'Close menu');
-  });
-
-  menu.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      menu.hidden = true;
-      btn.setAttribute('aria-expanded', 'false');
-    });
-  });
-}
-
-function initLangSelector() {
-  const selector = document.getElementById('langSelector');
-  if (!selector) return;
-  selector.addEventListener('change', (e) => {
-    setLocale(e.target.value);
-  });
-}
+/* =========================================
+   AI PREDICTION
+   ========================================= */
 
 async function handlePredict() {
   const file = getSelectedFile();
+
   if (!file) {
     showError(t('errors.noImage'));
     return;
   }
 
   const apiUrl = getApiUrl();
+
   if (!apiUrl) {
     showError(t('errors.analysisFailed'));
     return;
@@ -139,28 +176,201 @@ async function handlePredict() {
   showLoading();
 
   try {
-  const data = await predictDisease(file, apiUrl);
+    /*
+     * GPS is optional.
+     * If the farmer denies location permission,
+     * prediction continues normally.
+     */
+    const location = await getCurrentLocation();
 
-  // Leaf validator rejected the image
-  if (data && data.status === 'invalid_image') {
-    showError(t('errors.notLeaf'));
+    const data = await predictDisease(
+      file,
+      apiUrl,
+      location
+    );
+
+
+    /* -----------------------------------------
+       Leaf validator rejected the image
+       ----------------------------------------- */
+
+    if (data && data.status === 'invalid_image') {
+      showError(t('errors.notLeaf'));
+      return;
+    }
+
+
+    /* -----------------------------------------
+       Store latest result for other pages
+       ----------------------------------------- */
+
+    try {
+      sessionStorage.setItem(
+        'agrigaurd_latest_scan',
+        JSON.stringify({
+          ...data,
+          latitude: location?.latitude ?? null,
+          longitude: location?.longitude ?? null,
+          imageName: file.name,
+          scannedAt: new Date().toISOString()
+        })
+      );
+    } catch (storageError) {
+      console.warn(
+        'Could not save scan result:',
+        storageError
+      );
+    }
+
+
+    /* -----------------------------------------
+       Keep ORIGINAL result UI
+       ----------------------------------------- */
+
+    showResult(data);
+
+  } catch (err) {
+    showError(
+      `${t('errors.analysisFailed')} (${err.message})`
+    );
+  }
+}
+
+
+/* =========================================
+   HOW IT WORKS
+   ========================================= */
+
+function initSteps() {
+  const container = document.getElementById('stepsGrid');
+
+  if (!container) {
     return;
   }
 
-  showResult(data);
+  const steps = [
+    {
+      number: '01',
+      title: 'Take a Photo',
+      description: 'Capture a clear photo of the crop leaf.'
+    },
+    {
+      number: '02',
+      title: 'AI Analysis',
+      description: 'Our AI analyzes the leaf for possible disease.'
+    },
+    {
+      number: '03',
+      title: 'Get Guidance',
+      description: 'View the detected condition and recommended guidance.'
+    }
+  ];
 
-} catch (err) {
-  showError(`${t('errors.analysisFailed')} (${err.message})`);
-}
+  container.innerHTML = steps.map((step) => `
+    <article class="step-card">
+      <span class="step-number">${step.number}</span>
+      <h3>${step.title}</h3>
+      <p>${step.description}</p>
+    </article>
+  `).join('');
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+
+/* =========================================
+   CROPS
+   ========================================= */
+
+function initCrops() {
+  const container = document.getElementById('cropsGrid');
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = cropData.map((crop) => `
+    <article class="crop-card" role="listitem">
+      <div class="crop-icon">
+        ${getCropIcon(crop.name)}
+      </div>
+
+      <h3>${crop.name}</h3>
+
+      <p>
+        ${crop.diseaseCount} conditions
+      </p>
+    </article>
+  `).join('');
 }
+
+
+/* =========================================
+   MOBILE MENU
+   ========================================= */
+
+function initMobileMenu() {
+  const button = document.querySelector('.mobile-menu-btn');
+  const menu = document.getElementById('mobileMenu');
+
+  if (!button || !menu) {
+    return;
+  }
+
+  button.addEventListener('click', () => {
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+
+    button.setAttribute(
+      'aria-expanded',
+      String(!isOpen)
+    );
+
+    menu.hidden = isOpen;
+  });
+
+  menu.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      button.setAttribute('aria-expanded', 'false');
+      menu.hidden = true;
+    });
+  });
+}
+
+
+/* =========================================
+   LANGUAGE SELECTOR
+   ========================================= */
+
+function initLangSelector() {
+  const selector = document.getElementById('langSelector');
+
+  if (!selector) {
+    return;
+  }
+
+  selector.addEventListener('change', async (event) => {
+    await setLocale(event.target.value);
+  });
+}
+
+
+/* =========================================
+   GLOBAL PAGE NAVIGATION
+   ========================================= */
+
+window.openAdvisory = function () {
+  window.location.href = '/advisory.html';
+};
+
+window.openWeather = function () {
+  window.location.href = '/weather.html';
+};
+
+window.openHotspot = function () {
+  window.location.href = '/hotspot.html';
+};
+
+window.openOfficerLogin = function () {
+  window.location.href = '/officer-login.html';
+};
+
 
 document.addEventListener('DOMContentLoaded', init);
