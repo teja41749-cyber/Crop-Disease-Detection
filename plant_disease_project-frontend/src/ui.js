@@ -24,6 +24,7 @@ const elements = {
   diseaseResult: byId('diseaseResult'),
   lowConfidenceResult: byId('lowConfidenceResult'),
   healthyActions: byId('healthyActions'),
+  healthyConfidenceValue: byId('healthyConfidenceValue'),
   diseaseName: byId('diseaseName'),
   confidenceBadge: byId('confidenceBadge'),
   confidenceValue: byId('confidenceValue'),
@@ -40,7 +41,27 @@ const elements = {
   errorState: byId('errorState'),
   errorMessage: byId('errorMessage'),
   errorTryAgain: byId('errorTryAgain'),
-  errorChooseAnother: byId('errorChooseAnother')
+  errorChooseAnother: byId('errorChooseAnother'),
+  resultImageBlock: byId('resultImageBlock'),
+  resultImg: byId('resultImg'),
+  locationStatus: byId('locationStatus'),
+  weatherRiskBlock: byId('weatherRiskBlock'),
+  weatherRiskBadge: byId('weatherRiskBadge'),
+  weatherRiskExplanation: byId('weatherRiskExplanation'),
+  weatherRiskMetrics: byId('weatherRiskMetrics'),
+  weatherTemp: byId('weatherTemp'),
+  weatherHumidity: byId('weatherHumidity'),
+  weatherRain: byId('weatherRain'),
+  weatherRiskUnavailable: byId('weatherRiskUnavailable'),
+  feedbackBlock: byId('feedbackBlock'),
+  feedbackButtons: byId('feedbackButtons'),
+  feedbackYesBtn: byId('feedbackYesBtn'),
+  feedbackNoBtn: byId('feedbackNoBtn'),
+  feedbackForm: byId('feedbackForm'),
+  feedbackDiseaseInput: byId('feedbackDiseaseInput'),
+  feedbackSubmitBtn: byId('feedbackSubmitBtn'),
+  feedbackCancelBtn: byId('feedbackCancelBtn'),
+  feedbackStatus: byId('feedbackStatus')
 };
 
 const scannerSteps = [
@@ -51,7 +72,11 @@ const scannerSteps = [
 ];
 
 let selectedFile = null;
+let selectedPreviewUrl = null;
 let options = {};
+
+const LOCATION_PIN_ICON =
+  '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 
 export function init(opts) {
   options = opts || {};
@@ -138,11 +163,13 @@ function handleFileSelect(file) {
   if (elements.previewImg) {
     const reader = new FileReader();
     reader.onload = (e) => {
-      elements.previewImg.src = e.target.result;
+      selectedPreviewUrl = e.target.result;
+      elements.previewImg.src = selectedPreviewUrl;
       showStep('preview');
     };
     reader.readAsDataURL(file);
   } else {
+    selectedPreviewUrl = null;
     showStep('preview');
   }
 
@@ -153,6 +180,10 @@ function handleFileSelect(file) {
 
 export function getSelectedFile() {
   return selectedFile;
+}
+
+export function getSelectedPreviewUrl() {
+  return selectedPreviewUrl;
 }
 
 function showStep(name) {
@@ -198,13 +229,15 @@ export function showError(message) {
 }
 
 export function showResult(data) {
-  const isLowConfidence = data && data.warning && !data.disease;
+  const isUncertain = data && data.status === 'uncertain';
 
   hideAllResultBlocks();
+  resetResultExtras();
+  setResultImage();
   showStep('result');
 
-  if (isLowConfidence) {
-    renderLowConfidence(data);
+  if (isUncertain) {
+    renderUncertain(data);
   } else if (isHealthyResult(data)) {
     renderHealthy(data);
   } else {
@@ -216,7 +249,335 @@ export function showResult(data) {
   }
 }
 
-function isHealthyResult(data) {
+function resetResultExtras() {
+  if (elements.resultImageBlock) elements.resultImageBlock.hidden = true;
+  if (elements.resultImg) {
+    elements.resultImg.src = '';
+    elements.resultImg.alt = '';
+  }
+  if (elements.locationStatus) {
+    elements.locationStatus.hidden = true;
+    elements.locationStatus.textContent = '';
+  }
+  if (elements.weatherRiskBlock) elements.weatherRiskBlock.hidden = true;
+  if (elements.weatherRiskBadge) {
+    elements.weatherRiskBadge.hidden = true;
+    elements.weatherRiskBadge.textContent = '';
+    elements.weatherRiskBadge.className = 'risk-badge';
+  }
+  if (elements.weatherRiskExplanation) elements.weatherRiskExplanation.textContent = '';
+  if (elements.weatherRiskMetrics) elements.weatherRiskMetrics.hidden = true;
+  if (elements.weatherRiskUnavailable) {
+    elements.weatherRiskUnavailable.hidden = true;
+    elements.weatherRiskUnavailable.textContent = '';
+  }
+  setWeatherTitle('risk');
+  resetFeedbackUI();
+}
+
+function setResultImage() {
+  if (!elements.resultImageBlock || !elements.resultImg) {
+    return;
+  }
+
+  if (selectedPreviewUrl) {
+    elements.resultImg.src = selectedPreviewUrl;
+    elements.resultImg.alt = t('result.leafImageAlt');
+    elements.resultImageBlock.hidden = false;
+  }
+}
+
+export function renderLocationStatus(location) {
+  if (!elements.locationStatus) {
+    return;
+  }
+
+  const hasLocation = location &&
+    Number.isFinite(Number(location.latitude)) &&
+    Number.isFinite(Number(location.longitude));
+
+  elements.locationStatus.innerHTML =
+    LOCATION_PIN_ICON + '<span>' +
+    escapeHtml(t(hasLocation ? 'location.detected' : 'location.unavailable')) +
+    '</span>';
+  elements.locationStatus.hidden = false;
+}
+
+export function showWeatherLoading() {
+  if (!elements.weatherRiskBlock) {
+    return;
+  }
+
+  elements.weatherRiskBlock.hidden = false;
+  if (elements.weatherRiskBadge) elements.weatherRiskBadge.hidden = true;
+  if (elements.weatherRiskMetrics) elements.weatherRiskMetrics.hidden = true;
+  if (elements.weatherRiskUnavailable) {
+    elements.weatherRiskUnavailable.hidden = true;
+    elements.weatherRiskUnavailable.textContent = '';
+  }
+  if (elements.weatherRiskExplanation) {
+    elements.weatherRiskExplanation.textContent = t('weather.loading');
+  }
+}
+
+export function drawWeatherRisk(data) {
+  if (!elements.weatherRiskBlock) {
+    return;
+  }
+
+  const level = String(data.risk_level || '').toLowerCase();
+
+  if (!level || !['low', 'moderate', 'high'].includes(level)) {
+    showWeatherUnavailable('error');
+    return;
+  }
+
+  elements.weatherRiskBlock.hidden = false;
+  setWeatherTitle('risk');
+
+  if (elements.weatherRiskBadge) {
+    elements.weatherRiskBadge.textContent = t(`weather.riskLevels.${level}`);
+    elements.weatherRiskBadge.className = `risk-badge ${level}`;
+    elements.weatherRiskBadge.hidden = false;
+  }
+
+  if (elements.weatherRiskExplanation) {
+    elements.weatherRiskExplanation.textContent = t(`weather.explanations.${level}`);
+  }
+
+  renderWeatherMetrics(data);
+}
+
+function renderWeatherMetrics(data) {
+  if (elements.weatherTemp) {
+    elements.weatherTemp.textContent =
+      `${formatValue(data.temperature)}${t('weather.units.celsius')}`;
+  }
+
+  if (elements.weatherHumidity) {
+    const humidity =
+      data.humidity !== undefined
+        ? data.humidity
+        : data.relative_humidity;
+    elements.weatherHumidity.textContent =
+      `${formatValue(humidity)}${t('weather.units.percent')}`;
+  }
+
+  if (elements.weatherRain) {
+    elements.weatherRain.textContent =
+      `${formatValue(data.rainfall)}${t('weather.units.mm')}`;
+  }
+
+  if (elements.weatherRiskMetrics) elements.weatherRiskMetrics.hidden = false;
+  if (elements.weatherRiskUnavailable) {
+    elements.weatherRiskUnavailable.hidden = true;
+  }
+}
+
+function setWeatherTitle(mode) {
+  if (!elements.weatherRiskBlock) {
+    return;
+  }
+
+  const title = elements.weatherRiskBlock.querySelector('.weather-risk-title');
+  if (!title) {
+    return;
+  }
+
+  if (mode === 'conditions') {
+    title.textContent = t('result.weatherConditions');
+    title.removeAttribute('data-i18n');
+  } else {
+    title.textContent = t('result.weatherRisk');
+    title.setAttribute('data-i18n', 'result.weatherRisk');
+  }
+}
+
+export function drawWeatherConditions(data) {
+  if (!elements.weatherRiskBlock) {
+    return;
+  }
+
+  elements.weatherRiskBlock.hidden = false;
+  setWeatherTitle('conditions');
+
+  if (elements.weatherRiskBadge) {
+    elements.weatherRiskBadge.hidden = true;
+    elements.weatherRiskBadge.textContent = '';
+    elements.weatherRiskBadge.className = 'risk-badge';
+  }
+
+  if (elements.weatherRiskExplanation) {
+    elements.weatherRiskExplanation.textContent = t('result.weatherMonitored');
+  }
+
+  renderWeatherMetrics(data);
+}
+
+export function hideWeatherBlock() {
+  if (elements.weatherRiskBlock) elements.weatherRiskBlock.hidden = true;
+}
+
+export function showWeatherUnavailable(reason = 'error') {
+  if (!elements.weatherRiskBlock) {
+    return;
+  }
+
+  elements.weatherRiskBlock.hidden = false;
+
+  if (elements.weatherRiskBadge) elements.weatherRiskBadge.hidden = true;
+  if (elements.weatherRiskMetrics) elements.weatherRiskMetrics.hidden = true;
+  if (elements.weatherRiskExplanation) {
+    elements.weatherRiskExplanation.textContent = '';
+  }
+
+  const messageKey = reason === 'location'
+    ? 'weather.unavailableLocation'
+    : 'weather.unavailableError';
+
+  if (elements.weatherRiskUnavailable) {
+    elements.weatherRiskUnavailable.textContent = t(messageKey);
+    elements.weatherRiskUnavailable.hidden = false;
+  }
+}
+
+function formatValue(value) {
+  const num = Number(value);
+  if (Number.isNaN(num)) return '—';
+  return String(Math.round(num * 10) / 10);
+}
+
+/* =========================================
+   FEEDBACK
+   ========================================= */
+
+let feedbackCallback = null;
+let feedbackBusy = false;
+
+function resetFeedbackUI() {
+  feedbackBusy = false;
+
+  if (elements.feedbackBlock) elements.feedbackBlock.hidden = true;
+  if (elements.feedbackButtons) elements.feedbackButtons.hidden = false;
+  if (elements.feedbackForm) elements.feedbackForm.hidden = true;
+  if (elements.feedbackStatus) {
+    elements.feedbackStatus.hidden = true;
+    elements.feedbackStatus.textContent = '';
+    elements.feedbackStatus.className = 'feedback-status';
+  }
+
+  if (elements.feedbackDiseaseInput) {
+    elements.feedbackDiseaseInput.value = '';
+  }
+
+  setFeedbackEnabled(true);
+}
+
+function setFeedbackEnabled(enabled) {
+  [elements.feedbackYesBtn, elements.feedbackNoBtn, elements.feedbackSubmitBtn].forEach((btn) => {
+    if (btn) btn.disabled = !enabled;
+  });
+}
+
+function setFeedbackStatus(type, message) {
+  if (!elements.feedbackStatus) {
+    return;
+  }
+
+  elements.feedbackStatus.textContent = message;
+  elements.feedbackStatus.hidden = false;
+  elements.feedbackStatus.className = type ? `feedback-status ${type}` : 'feedback-status';
+}
+
+function showFeedbackButtons() {
+  if (elements.feedbackButtons) elements.feedbackButtons.hidden = false;
+  if (elements.feedbackForm) elements.feedbackForm.hidden = true;
+  if (elements.feedbackDiseaseInput) elements.feedbackDiseaseInput.value = '';
+}
+
+function showFeedbackForm() {
+  if (elements.feedbackButtons) elements.feedbackButtons.hidden = true;
+  if (elements.feedbackForm) elements.feedbackForm.hidden = false;
+  if (elements.feedbackStatus) {
+    elements.feedbackStatus.hidden = true;
+    elements.feedbackStatus.textContent = '';
+    elements.feedbackStatus.className = 'feedback-status';
+  }
+  if (elements.feedbackDiseaseInput) elements.feedbackDiseaseInput.focus();
+}
+
+function submitFeedback(payload) {
+  if (feedbackBusy || typeof feedbackCallback !== 'function') {
+    return;
+  }
+
+  feedbackBusy = true;
+  setFeedbackEnabled(false);
+  setFeedbackStatus('', t('result.feedbackProcessing'));
+
+  Promise.resolve(feedbackCallback(payload))
+    .then(() => {
+      setFeedbackEnabled(false);
+      if (elements.feedbackButtons) elements.feedbackButtons.hidden = true;
+      if (elements.feedbackForm) elements.feedbackForm.hidden = true;
+      setFeedbackStatus('success', t('result.feedbackSuccess'));
+    })
+    .catch(() => {
+      feedbackBusy = false;
+      setFeedbackEnabled(true);
+      showFeedbackButtons();
+      setFeedbackStatus('error', t('result.feedbackError'));
+    });
+}
+
+export function initResultFeedback(onSubmit) {
+  feedbackCallback = onSubmit || null;
+
+  if (!elements.feedbackYesBtn || elements.feedbackYesBtn.dataset.bound) {
+    return;
+  }
+
+  elements.feedbackYesBtn.dataset.bound = 'true';
+
+  elements.feedbackYesBtn.addEventListener('click', () => {
+    submitFeedback({ confirmed: true, actualDisease: null });
+  });
+
+  elements.feedbackNoBtn.addEventListener('click', () => {
+    showFeedbackForm();
+  });
+
+  elements.feedbackForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const disease = elements.feedbackDiseaseInput
+      ? elements.feedbackDiseaseInput.value.trim()
+      : '';
+    submitFeedback({
+      confirmed: false,
+      actualDisease: disease || null
+    });
+  });
+
+  elements.feedbackCancelBtn.addEventListener('click', () => {
+    showFeedbackButtons();
+    if (elements.feedbackStatus) {
+      elements.feedbackStatus.hidden = true;
+      elements.feedbackStatus.textContent = '';
+      elements.feedbackStatus.className = 'feedback-status';
+    }
+  });
+}
+
+export function showResultFeedback() {
+  if (!elements.feedbackBlock) {
+    return;
+  }
+
+  resetFeedbackUI();
+  elements.feedbackBlock.hidden = false;
+}
+
+export function isHealthyResult(data) {
   return !!(data && data.disease && /healthy/i.test(data.disease));
 }
 
@@ -229,6 +590,12 @@ function hideAllResultBlocks() {
 
 function renderHealthy(data) {
   if (elements.healthyResult) elements.healthyResult.hidden = false;
+
+  const confidence = clampConfidence(data.confidence);
+
+  if (elements.healthyConfidenceValue) {
+    elements.healthyConfidenceValue.textContent = `${confidence}%`;
+  }
 
   const actions = t('result.healthy.actions');
   if (elements.healthyActions && Array.isArray(actions)) {
@@ -265,7 +632,7 @@ function renderDisease(data) {
   if (elements.importantSection) elements.importantSection.hidden = true;
 }
 
-function renderLowConfidence(data) {
+function renderUncertain(data) {
   if (elements.lowConfidenceResult) elements.lowConfidenceResult.hidden = false;
 
   const confidence = clampConfidence(data.confidence);
@@ -291,10 +658,12 @@ function setRingProgress(element, percentage, isWarning = false) {
 
 export function clearSelection() {
   selectedFile = null;
+  selectedPreviewUrl = null;
   if (elements.fileInput) elements.fileInput.value = '';
   if (elements.cameraInput) elements.cameraInput.value = '';
   if (elements.previewImg) elements.previewImg.src = '';
   hideAllResultBlocks();
+  resetResultExtras();
   showStep('upload');
 }
 

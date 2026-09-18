@@ -1,6 +1,8 @@
 import {
   getApiUrl,
-  predictDisease
+  predictDisease,
+  submitFeedback,
+  getWeatherRisk
 } from './api.js';
 
 import {
@@ -8,14 +10,26 @@ import {
   getSelectedFile,
   showLoading,
   showError,
-  showResult
+  showResult,
+  renderLocationStatus,
+  showWeatherLoading,
+  drawWeatherRisk,
+  drawWeatherConditions,
+  showWeatherUnavailable,
+  hideWeatherBlock,
+  isHealthyResult,
+  initResultFeedback,
+  showResultFeedback
 } from './ui.js';
 
 import {
   initI18n,
-  setLang as setLocale,
   t
 } from './i18n.js';
+
+import {
+  renderHistory
+} from './history.js';
 
 import {
   createLeafScanAnimation,
@@ -28,10 +42,15 @@ import {
   getCropIcon
 } from './crops.js';
 
+import {
+  initShell
+} from './nav.js';
+
 
 let heroAnim = null;
 let loadingAnim = null;
 let resultAnim = null;
+let lastScanId = null;
 
 
 /* =========================================
@@ -65,6 +84,14 @@ function getCurrentLocation() {
   });
 }
 
+function hasValidLocation(location) {
+  return !!(
+    location &&
+    Number.isFinite(Number(location.latitude)) &&
+    Number.isFinite(Number(location.longitude))
+  );
+}
+
 
 /* =========================================
    MAIN INITIALIZATION
@@ -72,12 +99,11 @@ function getCurrentLocation() {
 
 async function init() {
   await initI18n();
+  initShell({ page: 'home' });
 
   initHeroAnimation();
   initSteps();
   initCrops();
-  initMobileMenu();
-  initLangSelector();
 
   initUi({
     onFileSelected: onFileSelected,
@@ -85,6 +111,9 @@ async function init() {
     onAnalyzing: startLoadingAnimation,
     onResult: onResultShown
   });
+
+  initResultFeedback(handleFeedbackSubmit);
+  renderHistory();
 }
 
 
@@ -224,16 +253,118 @@ async function handlePredict() {
 
 
     /* -----------------------------------------
-       Keep ORIGINAL result UI
+       Keep ORIGINAL result UI + new extras
        ----------------------------------------- */
 
+    lastScanId = data && typeof data.scan_id !== 'undefined'
+      ? data.scan_id
+      : null;
+
     showResult(data);
+
+    /*
+     * Weather risk, location status and farmer feedback
+     * appear ONLY for confident (success) predictions.
+     * Healthy results get neutral weather conditions
+     * (no disease-risk wording) and skip the location ring.
+     */
+    if (data.status === 'success') {
+      if (isHealthyResult(data)) {
+        renderWeatherConditionsForLocation(location);
+        showResultFeedback();
+      } else {
+        renderLocationStatus(location);
+        renderWeatherRiskForLocation(location);
+        showResultFeedback();
+      }
+    }
 
   } catch (err) {
     showError(
       `${t('errors.analysisFailed')} (${err.message})`
     );
   }
+}
+
+
+/* =========================================
+   WEATHER-BASED RISK (result screen)
+   ========================================= */
+
+async function renderWeatherRiskForLocation(location) {
+  if (!hasValidLocation(location)) {
+    showWeatherUnavailable('location');
+    return;
+  }
+
+  showWeatherLoading();
+
+  try {
+    const weather = await getWeatherRisk(
+      location.latitude,
+      location.longitude
+    );
+
+    if (weather && weather.risk_level) {
+      drawWeatherRisk(weather);
+    } else {
+      showWeatherUnavailable('error');
+    }
+  } catch (err) {
+    console.warn('Weather risk failed:', err);
+    showWeatherUnavailable('error');
+  }
+}
+
+/*
+ * Healthy results get a neutral weather-conditions card.
+ * If weather data can't be obtained, the card is hidden.
+ */
+async function renderWeatherConditionsForLocation(location) {
+  if (!hasValidLocation(location)) {
+    hideWeatherBlock();
+    return;
+  }
+
+  showWeatherLoading();
+
+  try {
+    const weather = await getWeatherRisk(
+      location.latitude,
+      location.longitude
+    );
+
+    const hasMetrics = weather &&
+      (weather.temperature !== undefined ||
+        weather.humidity !== undefined ||
+        weather.rainfall !== undefined);
+
+    if (hasMetrics) {
+      drawWeatherConditions(weather);
+    } else {
+      hideWeatherBlock();
+    }
+  } catch (err) {
+    console.warn('Weather fetch failed:', err);
+    hideWeatherBlock();
+  }
+}
+
+
+/* =========================================
+   FARMER FEEDBACK
+   ========================================= */
+
+async function handleFeedbackSubmit(payload) {
+  if (!lastScanId) {
+    throw new Error('No scan id available for feedback');
+  }
+
+  return submitFeedback(
+    lastScanId,
+    payload.confirmed,
+    payload.actualDisease || null
+  );
 }
 
 
@@ -248,27 +379,15 @@ function initSteps() {
     return;
   }
 
-  const steps = [
-    {
-      number: '01',
-      title: 'Take a Photo',
-      description: 'Capture a clear photo of the crop leaf.'
-    },
-    {
-      number: '02',
-      title: 'AI Analysis',
-      description: 'Our AI analyzes the leaf for possible disease.'
-    },
-    {
-      number: '03',
-      title: 'Get Guidance',
-      description: 'View the detected condition and recommended guidance.'
-    }
-  ];
+  const steps = t('howItWorks.steps');
 
-  container.innerHTML = steps.map((step) => `
+  if (!Array.isArray(steps) || !steps.length) {
+    return;
+  }
+
+  container.innerHTML = steps.map((step, index) => `
     <article class="step-card">
-      <span class="step-number">${step.number}</span>
+      <span class="step-number">${String(index + 1).padStart(2, '0')}</span>
       <h3>${step.title}</h3>
       <p>${step.description}</p>
     </article>
@@ -296,59 +415,10 @@ function initCrops() {
       <h3>${crop.name}</h3>
 
       <p>
-        ${crop.diseaseCount} conditions
+        ${crop.diseases} conditions
       </p>
     </article>
   `).join('');
-}
-
-
-/* =========================================
-   MOBILE MENU
-   ========================================= */
-
-function initMobileMenu() {
-  const button = document.querySelector('.mobile-menu-btn');
-  const menu = document.getElementById('mobileMenu');
-
-  if (!button || !menu) {
-    return;
-  }
-
-  button.addEventListener('click', () => {
-    const isOpen = button.getAttribute('aria-expanded') === 'true';
-
-    button.setAttribute(
-      'aria-expanded',
-      String(!isOpen)
-    );
-
-    menu.hidden = isOpen;
-  });
-
-  menu.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', () => {
-      button.setAttribute('aria-expanded', 'false');
-      menu.hidden = true;
-    });
-  });
-}
-
-
-/* =========================================
-   LANGUAGE SELECTOR
-   ========================================= */
-
-function initLangSelector() {
-  const selector = document.getElementById('langSelector');
-
-  if (!selector) {
-    return;
-  }
-
-  selector.addEventListener('change', async (event) => {
-    await setLocale(event.target.value);
-  });
 }
 
 
@@ -368,8 +438,12 @@ window.openHotspot = function () {
   window.location.href = '/hotspot.html';
 };
 
+window.openDashboard = function () {
+  window.location.href = '/dashboard.html';
+};
+
 window.openOfficerLogin = function () {
-  window.location.href = '/officer-login.html';
+  window.location.href = '/dashboard.html';
 };
 
 

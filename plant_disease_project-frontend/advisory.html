@@ -3,138 +3,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta name="description" content="Treatment and IPM advisory based on your latest AI scan.">
   <title>Agrigaurd | Advisory</title>
-
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/styles.css">
 </head>
-
 <body>
+  <a href="#main-content" class="skip-link" data-i18n="skip.main">Skip to main content</a>
 
-<header class="navbar">
-  <div class="container navbar-inner">
+  <div id="shell-nav"></div>
 
-    <a href="/" class="navbar-brand">
-      <span class="navbar-title">Agrigaurd</span>
-    </a>
+  <main id="main-content" class="subpage-main" role="main">
+    <div class="container subpage-narrow">
+      <header class="section-header">
+        <h1 class="section-title" data-i18n="advisory.title">Treatment & IPM Advisory</h1>
+        <p class="section-subtitle" data-i18n="advisory.subtitle">Guidance based on your latest AI scan.</p>
+      </header>
 
-    <nav class="navbar-nav">
-      <a href="/" class="navbar-link">Home</a>
-      <a href="/weather.html" class="navbar-link">Weather Risk</a>
-      <a href="/hotspot.html" class="navbar-link">Hotspot Map</a>
-    </nav>
+      <div id="advisoryContent">
+        <div class="scanner-card">
+          <h2 id="diseaseName" data-i18n="advisory.loading">Loading...</h2>
+          <p id="confidence"></p>
 
-  </div>
-</header>
+          <hr class="advisory-divider">
 
+          <h3 class="advisory-heading" data-i18n="advisory.recommendedTreatment">Recommended Treatment</h3>
+          <p id="treatment"></p>
 
-<main class="container" style="padding: 48px 20px;">
+          <h3 class="advisory-heading" data-i18n="advisory.prevention">Prevention</h3>
+          <p id="prevention"></p>
 
-  <header class="section-header">
-    <h1 class="section-title">
-      Treatment & IPM Advisory
-    </h1>
+          <h3 class="advisory-heading" data-i18n="advisory.important">Important</h3>
+          <p id="important"></p>
+        </div>
 
-    <p class="section-subtitle">
-      Guidance based on your latest AI scan.
-    </p>
-  </header>
+        <div class="scanner-card advisory-ipm">
+          <h2 data-i18n="advisory.ipm">Integrated Pest Management</h2>
+          <ul id="ipmList"></ul>
+        </div>
 
-
-  <section id="advisoryContent">
-
-    <div class="scanner-card">
-
-      <h2 id="diseaseName">
-        Loading...
-      </h2>
-
-      <p id="confidence"></p>
-
-      <hr>
-
-      <h3>Recommended Treatment</h3>
-      <p id="treatment">
-        Loading...
-      </p>
-
-      <h3>Prevention</h3>
-      <p id="prevention">
-        Follow integrated pest management practices.
-      </p>
-
-      <h3>Important</h3>
-      <p id="important">
-        Consult a local agricultural expert for critical decisions.
-      </p>
-
+        <p id="noScanBlock" hidden>
+          <a href="/" class="btn btn-primary btn-lg" data-i18n="advisory.scanAgain">Scan a Leaf</a>
+        </p>
+      </div>
     </div>
+  </main>
 
+  <div id="shell-footer"></div>
 
-    <div class="scanner-card" style="margin-top: 24px;">
+  <script type="module">
+    import { initI18n, t } from '/src/i18n.js';
+    import { initShell } from '/src/nav.js';
 
-      <h2>Integrated Pest Management</h2>
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-      <ul>
-        <li>Regularly inspect crop leaves.</li>
-        <li>Remove severely affected plant material where appropriate.</li>
-        <li>Maintain good field sanitation.</li>
-        <li>Use recommended cultural and biological practices.</li>
-        <li>Use chemical treatment only according to approved agricultural guidance.</li>
-      </ul>
+    function prettyDisease(name) {
+      if (!name) return t('history.unknownDisease');
+      return String(name)
+        .replace(/___/g, ' — ')
+        .replace(/_/g, ' ');
+    }
 
-    </div>
+    function render() {
+      const diseaseName = document.getElementById('diseaseName');
+      const confidence = document.getElementById('confidence');
+      const treatment = document.getElementById('treatment');
+      const prevention = document.getElementById('prevention');
+      const important = document.getElementById('important');
+      const ipmList = document.getElementById('ipmList');
+      const noScanBlock = document.getElementById('noScanBlock');
 
-  </section>
+      const ipmItems = t('advisory.ipmItems');
+      if (ipmList && Array.isArray(ipmItems)) {
+        ipmList.innerHTML = ipmItems
+          .map((item) => `<li>${escapeHtml(item)}</li>`)
+          .join('');
+      }
 
-</main>
+      prevention.textContent = t('advisory.preventionDefault');
+      important.textContent = t('advisory.importantDefault');
 
+      const raw = sessionStorage.getItem('agrigaurd_latest_scan');
 
-<script type="module">
+      if (!raw) {
+        if (noScanBlock) noScanBlock.hidden = false;
+        diseaseName.textContent = t('advisory.noScan');
+        confidence.textContent = t('advisory.noScanHint');
+        treatment.textContent = t('advisory.noTreatment');
+        return;
+      }
 
-const raw = sessionStorage.getItem(
-  'agrigaurd_latest_scan'
-);
+      const data = JSON.parse(raw);
 
-const diseaseName =
-  document.getElementById('diseaseName');
+      diseaseName.textContent = prettyDisease(data.disease) || t('advisory.noScan');
 
-const confidence =
-  document.getElementById('confidence');
+      if (data.confidence !== undefined) {
+        const value = Number(data.confidence);
+        if (Number.isFinite(value)) {
+          confidence.textContent =
+            `${t('advisory.confidence')}: ${Math.round(value * 10) / 10}%`;
+        }
+      }
 
-const treatment =
-  document.getElementById('treatment');
+      treatment.textContent = data.remedy || t('advisory.noTreatment');
+    }
 
-if (!raw) {
+    async function init() {
+      await initI18n();
+      initShell({ page: 'advisory' });
+      render();
+    }
 
-  diseaseName.textContent =
-    'No recent scan found';
-
-  confidence.textContent =
-    'Please return to the scanner and analyze a leaf.';
-
-} else {
-
-  const data = JSON.parse(raw);
-
-  diseaseName.textContent =
-    data.disease || 'Uncertain result';
-
-  if (data.confidence !== undefined) {
-
-    confidence.textContent =
-      `Detection confidence: ${
-        (Number(data.confidence) * 100).toFixed(1)
-      }%`;
-
-  }
-
-  treatment.textContent =
-    data.remedy ||
-    'No treatment information was returned for this result.';
-}
-
-</script>
-
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>

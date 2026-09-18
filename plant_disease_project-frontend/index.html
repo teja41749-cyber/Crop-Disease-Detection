@@ -13,51 +13,7 @@
 <body>
   <a href="#main-content" class="skip-link" data-i18n="skip.main">Skip to main content</a>
 
-  <header class="navbar" role="banner">
-    <div class="container navbar-inner">
-      <a href="#" class="navbar-brand" aria-label="Agrigaurd Home" data-i18n-attr="app.name:aria-label">
-        <svg class="navbar-logo" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <path d="M29 5C19 9 11 17 9 25c5 3 12 0 13-6 1-3 3-8 7-14z" fill="currentColor" opacity="0.9"/>
-          <line x1="27" y1="7" x2="12" y2="22" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
-          <circle cx="18" cy="13" r="7" stroke="currentColor" stroke-width="2.75" fill="none"/>
-          <line x1="23" y1="18" x2="29" y2="24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"/>
-        </svg>
-        <span class="navbar-title" data-i18n="app.name">Agrigaurd</span>
-      </a>
-
-      <nav class="navbar-nav" aria-label="Main navigation">
-        <a href="#" class="navbar-link" data-i18n="nav.home">Home</a>
-        <a href="#scanner" class="navbar-link" data-i18n="nav.detect">Detect</a>
-        <a href="#how-it-works" class="navbar-link" data-i18n="nav.howItWorks">How It Works</a>
-        <a href="#about" class="navbar-link" data-i18n="nav.about">About</a>
-      </nav>
-
-      <div class="lang-selector-wrapper">
-        <label for="langSelector" class="sr-only" data-i18n="lang.select">Select language</label>
-        <select id="langSelector" class="lang-selector" aria-label="Select language">
-          <option value="en" data-i18n="lang.english">English</option>
-          <option value="mr" data-i18n="lang.marathi">मराठी</option>
-        </select>
-      </div>
-
-      <a href="#scanner" class="btn btn-primary navbar-cta" data-i18n="hero.scanLeaf">Scan a Leaf</a>
-
-      <button class="mobile-menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <line x1="3" y1="6" x2="21" y2="6"/>
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="mobile-menu" id="mobileMenu" hidden>
-      <a href="#" class="mobile-menu-link" data-i18n="nav.home">Home</a>
-      <a href="#scanner" class="mobile-menu-link" data-i18n="nav.detect">Detect</a>
-      <a href="#how-it-works" class="mobile-menu-link" data-i18n="nav.howItWorks">How It Works</a>
-      <a href="#about" class="mobile-menu-link" data-i18n="nav.about">About</a>
-    </div>
-  </header>
+  <div id="shell-nav"></div>
 
   <main id="main-content" role="main">
     <section class="hero" aria-labelledby="hero-title">
@@ -164,11 +120,21 @@
           <div class="scanner-step" id="stepResult" hidden>
             <div class="result-card" id="resultCard">
               <div class="result-animation-wrapper" id="resultAnimation"></div>
+
+              <div class="result-image-wrapper" id="resultImageBlock" hidden>
+                <img id="resultImg" class="result-img" alt="">
+              </div>
+
+              <p class="location-status" id="locationStatus" hidden></p>
               
               <div class="result-content" id="resultContent">
                 <div class="result-healthy" id="healthyResult" hidden>
                   <h3 class="result-title" data-i18n="result.healthy.title">Leaf Looks Healthy</h3>
                   <p class="result-description" data-i18n="result.healthy.description">No clear signs of disease were detected.</p>
+                  <div class="confidence-display">
+                    <span class="confidence-label" data-i18n="result.disease.confidence">Detection confidence</span>
+                    <span class="confidence-value" id="healthyConfidenceValue">0%</span>
+                  </div>
                   <div class="healthy-actions">
                     <h4 data-i18n="result.healthy.whatYouCanDo">What you can do</h4>
                     <ul class="action-list" id="healthyActions"></ul>
@@ -225,6 +191,58 @@
                 </section>
               </div>
 
+              <section class="weather-risk-block" id="weatherRiskBlock" hidden aria-live="polite">
+                <div class="weather-risk-header">
+                  <span class="weather-risk-title" data-i18n="result.weatherRisk">Weather risk</span>
+                  <span class="risk-badge" id="weatherRiskBadge" hidden></span>
+                </div>
+                <p class="risk-explanation" id="weatherRiskExplanation"></p>
+                <div class="risk-metrics" id="weatherRiskMetrics" hidden>
+                  <div class="risk-metric">
+                    <span class="risk-metric-label" data-i18n="weather.temperature">Temperature</span>
+                    <span class="risk-metric-value" id="weatherTemp"></span>
+                  </div>
+                  <div class="risk-metric">
+                    <span class="risk-metric-label" data-i18n="weather.humidity">Relative Humidity</span>
+                    <span class="risk-metric-value" id="weatherHumidity"></span>
+                  </div>
+                  <div class="risk-metric">
+                    <span class="risk-metric-label" data-i18n="weather.rainfall">Rainfall</span>
+                    <span class="risk-metric-value" id="weatherRain"></span>
+                  </div>
+                </div>
+                <p class="weather-unavailable" id="weatherRiskUnavailable" hidden></p>
+              </section>
+
+              <section class="feedback-block" id="feedbackBlock" hidden aria-live="polite">
+                <h4 class="feedback-title" data-i18n="result.feedbackTitle">Was this diagnosis correct?</h4>
+                <div class="feedback-buttons" id="feedbackButtons">
+                  <button type="button" class="btn btn-outline" id="feedbackYesBtn" data-i18n="result.feedbackYes">Yes, correct</button>
+                  <button type="button" class="btn btn-outline" id="feedbackNoBtn" data-i18n="result.feedbackNo">No, incorrect</button>
+                </div>
+                <form class="feedback-form" id="feedbackForm" hidden>
+                  <label for="feedbackDiseaseInput" data-i18n="result.feedbackQuestion">What disease do you think it is?</label>
+                  <input type="text" id="feedbackDiseaseInput" maxlength="120" autocomplete="off" data-i18n="result.feedbackPlaceholder" list="diseaseSuggestions">
+                  <div class="feedback-form-actions">
+                    <button type="submit" class="btn btn-primary" id="feedbackSubmitBtn" data-i18n="result.feedbackSubmit">Submit Feedback</button>
+                    <button type="button" class="btn btn-outline" id="feedbackCancelBtn" data-i18n="result.feedbackCancel">Cancel</button>
+                  </div>
+                </form>
+                <datalist id="diseaseSuggestions">
+                  <option value="Apple Scab"></option>
+                  <option value="Bacterial Spot"></option>
+                  <option value="Black Measles"></option>
+                  <option value="Black Rot"></option>
+                  <option value="Cedar Apple Rust"></option>
+                  <option value="Early Blight"></option>
+                  <option value="Healthy"></option>
+                  <option value="Late Blight"></option>
+                  <option value="Leaf Rust"></option>
+                  <option value="Powdery Mildew"></option>
+                </datalist>
+                <p class="feedback-status" id="feedbackStatus" hidden></p>
+              </section>
+
               <button type="button" class="btn btn-primary btn-lg btn-full" id="scanAnotherBtn" data-i18n="result.scanAnother">Scan Another Leaf</button>
             </div>
           </div>
@@ -240,6 +258,17 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section id="history" class="history" aria-labelledby="history-title">
+      <div class="container">
+        <header class="section-header">
+          <h2 id="history-title" class="section-title" data-i18n="history.title">Scan History</h2>
+          <p class="section-subtitle" data-i18n="history.subtitle">Recent disease scans from your area.</p>
+        </header>
+        <div id="historyState" class="history-state" role="status"></div>
+        <ul id="historyList" class="history-list" role="list"></ul>
       </div>
     </section>
 
@@ -275,26 +304,7 @@
     </section>
   </main>
 
-  <footer class="footer" role="contentinfo">
-    <div class="container footer-inner">
-      <div class="footer-brand">
-        <svg class="footer-logo" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <path d="M29 5C19 9 11 17 9 25c5 3 12 0 13-6 1-3 3-8 7-14z" fill="currentColor" opacity="0.9"/>
-          <line x1="27" y1="7" x2="12" y2="22" stroke="#1B3A24" stroke-width="1" stroke-linecap="round" opacity="0.45"/>
-          <circle cx="18" cy="13" r="7" stroke="currentColor" stroke-width="2.75" fill="none"/>
-          <line x1="23" y1="18" x2="29" y2="24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"/>
-        </svg>
-        <p data-i18n="app.name">Agrigaurd</p>
-      </div>
-      <p class="footer-copyright" data-i18n="footer.copyright">AI-powered crop health analysis for farmers</p>
-      <div class="footer-links">
-        <a href="#scanner" class="footer-link" data-i18n="nav.detect">Detect</a>
-        <a href="#how-it-works" class="footer-link" data-i18n="nav.howItWorks">How It Works</a>
-        <a href="#about" class="footer-link" data-i18n="nav.about">About</a>
-      </div>
-      <p class="footer-disclaimer" data-i18n="footer.disclaimer">This tool provides AI-assisted detection for informational purposes. Consult a local agricultural expert for critical decisions.</p>
-    </div>
-  </footer>
+  <div id="shell-footer"></div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

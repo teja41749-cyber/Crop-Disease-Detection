@@ -8,9 +8,11 @@
   },
   "nav": {
     "home": "Home",
-    "detect": "Detect",
-    "howItWorks": "How It Works",
-    "about": "About"
+    "scan": "Scan",
+    "history": "History",
+    "weather": "Weather",
+    "hotspots": "Hotspots",
+    "dashboard": "Dashboard"
   },
   "lang": {
     "select": "Select language",
@@ -51,6 +53,23 @@
     "analyzingDesc": "Our AI is carefully analyzing the leaf."
   },
   "result": {
+    "leafImageAlt": "The leaf you scanned",
+    "locationDetected": "Location detected",
+    "locationUnavailable": "Location unavailable",
+    "weatherRisk": "Weather risk",
+    "weatherConditions": "Weather Conditions",
+    "weatherMonitored": "Current weather conditions are being monitored.",
+    "feedbackTitle": "Was this diagnosis correct?",
+    "feedbackYes": "Yes, correct",
+    "feedbackNo": "No, incorrect",
+    "feedbackQuestion": "What disease do you think it is?",
+    "feedbackPlaceholder": "Type the disease name",
+    "feedbackSubmit": "Submit Feedback",
+    "feedbackCancel": "Cancel",
+    "feedbackProcessing": "Submitting your feedback...",
+    "feedbackSuccess": "Thank you. Your feedback has been recorded and can help improve future model versions.",
+    "feedbackError": "Sorry, we couldn't record your feedback. Please try again.",
+    "feedbackRetry": "Try Again",
     "healthy": {
       "title": "Leaf Looks Healthy",
       "description": "No clear signs of disease were detected.",
@@ -76,6 +95,115 @@
       "scanAgain": "Scan Again"
     },
     "scanAnother": "Scan Another Leaf"
+  },
+  "weather": {
+    "title": "Weather Disease Risk",
+    "subtitle": "Weather conditions that may increase crop disease risk.",
+    "loading": "Loading weather...",
+    "risk": "Disease Risk",
+    "temperature": "Temperature",
+    "humidity": "Relative Humidity",
+    "rainfall": "Rainfall",
+    "precipitation": "Daily Precipitation",
+    "unavailable": "Weather risk unavailable",
+    "unavailableLocation": "Weather risk is unavailable because the scan has no location. Allow location access to use weather-based risk.",
+    "unavailableError": "Weather risk is temporarily unavailable. Please try again later.",
+    "error": "Unable to load weather risk.",
+    "riskLevels": {
+      "low": "Low Risk",
+      "moderate": "Moderate Risk",
+      "high": "High Risk"
+    },
+    "explanations": {
+      "low": "Current conditions are favorable for your crop.",
+      "moderate": "Rainfall and humidity may favor disease development. Keep monitoring your crop.",
+      "high": "Rainfall and humidity strongly favor disease development. Take preventive action now."
+    },
+    "units": {
+      "celsius": "°C",
+      "percent": "%",
+      "mm": "mm"
+    }
+  },
+  "history": {
+    "title": "Scan History",
+    "subtitle": "Recent disease scans from your area.",
+    "loading": "Loading scan history...",
+    "empty": "No scan history yet.",
+    "error": "Couldn't load scan history.",
+    "retry": "Try Again",
+    "view": "View",
+    "hide": "Hide",
+    "confidence": "Confidence",
+    "details": "Details",
+    "locationAvailable": "Location available",
+    "locationUnavailable": "No location",
+    "unknownDisease": "Unknown",
+    "feedback": {
+      "pending": "Not reviewed",
+      "confirmed": "Confirmed by farmer",
+      "incorrect": "Reported as incorrect"
+    },
+    "date": "Date",
+    "latitude": "Latitude",
+    "longitude": "Longitude"
+  },
+  "location": {
+    "detected": "Location detected",
+    "unavailable": "Location unavailable"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Statistics collected from farmer scans.",
+    "loading": "Loading dashboard...",
+    "empty": "No statistics available yet.",
+    "error": "Couldn't load dashboard statistics.",
+    "retry": "Try Again",
+    "totalScans": "Total Scans",
+    "pendingConfirmations": "Pending Confirmations",
+    "diseaseFrequency": "Disease Frequency",
+    "districts": "District Statistics",
+    "tableDisease": "Disease",
+    "tableCount": "Count",
+    "tableDistrict": "District",
+    "tableScans": "Scans",
+    "unknown": "Unknown"
+  },
+  "hotspot": {
+    "title": "Crop Disease Hotspots",
+    "subtitle": "Locations of recorded disease scans.",
+    "loading": "Loading hotspots...",
+    "empty": "No disease hotspots to show yet.",
+    "error": "Couldn't load hotspots.",
+    "retry": "Try Again",
+    "confidence": "Confidence",
+    "confirmed": "Confirmed",
+    "notConfirmed": "Not confirmed",
+    "notReviewed": "Not reviewed",
+    "unknown": "Unknown"
+  },
+  "advisory": {
+    "title": "Treatment & IPM Advisory",
+    "subtitle": "Guidance based on your latest AI scan.",
+    "noScan": "No recent scan found",
+    "noScanHint": "Please return to the scanner and analyze a leaf.",
+    "loading": "Loading...",
+    "confidence": "Detection confidence",
+    "recommendedTreatment": "Recommended Treatment",
+    "prevention": "Prevention",
+    "important": "Important",
+    "preventionDefault": "Follow integrated pest management practices.",
+    "importantDefault": "Consult a local agricultural expert for critical decisions.",
+    "ipm": "Integrated Pest Management",
+    "ipmItems": [
+      "Regularly inspect crop leaves.",
+      "Remove severely affected plant material where appropriate.",
+      "Maintain good field sanitation.",
+      "Use recommended cultural and biological practices.",
+      "Use chemical treatment only according to approved agricultural guidance."
+    ],
+    "noTreatment": "No treatment information was returned for this result.",
+    "scanAgain": "Scan a Leaf"
   },
   "howItWorks": {
     "title": "How It Works",
@@ -109,7 +237,8 @@
     "notLeaf": "This does not appear to be a crop leaf. Please upload a clear photo of a single crop leaf.",
     "analysisFailed": "We couldn't analyze this image right now. Please try again.",
     "tryAgain": "Try Again",
-    "chooseAnother": "Choose Another Image"
+    "chooseAnother": "Choose Another Image",
+    "generic": "Something went wrong. Please try again."
   },
   "footer": {
     "copyright": "AI-powered crop health analysis for farmers",

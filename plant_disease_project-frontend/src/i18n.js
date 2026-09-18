@@ -45,7 +45,7 @@ function getNested(obj, path) {
   return path.split('.').reduce((o, k) => (o || {})[k], obj);
 }
 
-function applyTranslations() {
+export function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     const value = t(key);
@@ -68,7 +68,7 @@ function applyTranslations() {
   });
 }
 
-function updateLangSelector() {
+export function updateLangSelector() {
   const selector = document.getElementById('langSelector');
   if (selector) {
     selector.value = currentLang;

@@ -1,182 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Weather-based crop disease risk for farmers.">
   <title>Agrigaurd | Weather Risk</title>
-
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/styles.css">
-
 </head>
-
 <body>
+  <a href="#main-content" class="skip-link" data-i18n="skip.main">Skip to main content</a>
 
-<header class="navbar">
+  <div id="shell-nav"></div>
 
-  <div class="container navbar-inner">
+  <main id="main-content" class="subpage-main" role="main">
+    <div class="container subpage-narrow">
+      <header class="section-header">
+        <h1 class="section-title" data-i18n="weather.title">Weather Disease Risk</h1>
+        <p class="section-subtitle" data-i18n="weather.subtitle">Weather conditions that may increase crop disease risk.</p>
+      </header>
 
-    <a href="/" class="navbar-brand">
-      <span class="navbar-title">Agrigaurd</span>
-    </a>
+      <div class="scanner-card weather-content">
+        <div id="weatherState" class="state-msg" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          <span data-i18n="weather.loading">Loading weather...</span>
+        </div>
 
-    <nav class="navbar-nav">
-      <a href="/" class="navbar-link">Home</a>
-      <a href="/advisory.html" class="navbar-link">Advisory</a>
-      <a href="/hotspot.html" class="navbar-link">Hotspot Map</a>
-    </nav>
-
-  </div>
-
-</header>
-
-
-<main class="container" style="padding: 48px 20px;">
-
-  <header class="section-header">
-
-    <h1 class="section-title">
-      Weather Disease Risk
-    </h1>
-
-    <p class="section-subtitle">
-      Weather conditions that may increase crop disease risk.
-    </p>
-
-  </header>
-
-
-  <section class="scanner-card">
-
-    <div id="weatherStatus">
-      Loading weather...
+        <div id="weatherContent" hidden>
+          <div class="weather-risk-block">
+            <div class="weather-risk-header">
+              <span class="weather-risk-title" data-i18n="weather.risk">Disease Risk</span>
+              <span class="risk-badge" id="weatherRiskBadge"></span>
+            </div>
+            <p class="risk-explanation" id="weatherExplanation"></p>
+            <div class="risk-metrics" id="weatherMetrics">
+              <div class="risk-metric">
+                <span class="risk-metric-label" data-i18n="weather.temperature">Temperature</span>
+                <span class="risk-metric-value" id="weatherTemp"></span>
+              </div>
+              <div class="risk-metric">
+                <span class="risk-metric-label" data-i18n="weather.humidity">Relative Humidity</span>
+                <span class="risk-metric-value" id="weatherHumidity"></span>
+              </div>
+              <div class="risk-metric">
+                <span class="risk-metric-label" data-i18n="weather.rainfall">Rainfall</span>
+                <span class="risk-metric-value" id="weatherRain"></span>
+              </div>
+              <div class="risk-metric">
+                <span class="risk-metric-label" data-i18n="weather.precipitation">Daily Precipitation</span>
+                <span class="risk-metric-value" id="weatherPrecipitation"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </main>
 
-    <div
-      id="weatherDetails"
-      style="margin-top: 24px;"
-    ></div>
+  <div id="shell-footer"></div>
 
-  </section>
+  <script type="module">
+    import { getWeatherRisk } from '/src/api.js';
+    import { initI18n, t, getCurrentLang } from '/src/i18n.js';
+    import { initShell } from '/src/nav.js';
 
-</main>
+    function getLocation() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve(null);
+          return;
+        }
 
-
-<script type="module">
-
-import {
-  getWeatherRisk
-} from '/src/api.js';
-
-
-function getLocation() {
-
-  return new Promise((resolve) => {
-
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+          },
+          () => resolve(null),
+          {
+            enableHighAccuracy: true,
+            timeout: 8000,
+            maximumAge: 300000
+          }
+        );
+      });
     }
 
-    navigator.geolocation.getCurrentPosition(
-      position => {
+    function formatValue(value) {
+      const num = Number(value);
+      if (Number.isNaN(num)) return '—';
+      return String(Math.round(num * 10) / 10);
+    }
 
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        });
+    function setState(message, isError = false) {
+      const state = document.getElementById('weatherState');
+      if (!state) return;
 
-      },
-      () => resolve(null),
-      {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 300000
+      state.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>' +
+        escapeHtml(message) + '</span>';
+      state.hidden = false;
+      state.className = 'state-msg' + (isError ? ' state-error' : '');
+      document.getElementById('weatherContent').hidden = true;
+    }
+
+    function showWeather(data) {
+      const state = document.getElementById('weatherState');
+      if (state) state.hidden = true;
+
+      const content = document.getElementById('weatherContent');
+      if (content) content.hidden = false;
+
+      const level = String(data.risk_level || '').toLowerCase();
+      const levelKey = ['low', 'moderate', 'high'].includes(level)
+        ? level
+        : null;
+
+      if (!levelKey) {
+        showErrorData();
+        return;
       }
-    );
 
-  });
+      const badge = document.getElementById('weatherRiskBadge');
+      if (badge) {
+        badge.textContent = t(`weather.riskLevels.${levelKey}`);
+        badge.className = `risk-badge ${levelKey}`;
+      }
 
-}
+      const explanation = document.getElementById('weatherExplanation');
+      if (explanation) {
+        explanation.textContent = t(`weather.explanations.${levelKey}`);
+      }
 
+      const setMetric = (id, value, suffix) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `${formatValue(value)}${t(`weather.units.${suffix}`)}`;
+      };
 
-async function loadWeather() {
+      setMetric('weatherTemp', data.temperature, 'celsius');
+      setMetric('weatherHumidity', data.humidity !== undefined ? data.humidity : data.relative_humidity, 'percent');
+      setMetric('weatherRain', data.rainfall, 'mm');
+      setMetric('weatherPrecipitation', data.precipitation_sum, 'mm');
+    }
 
-  const status =
-    document.getElementById('weatherStatus');
+    function showErrorData() {
+      setState(t('weather.error'), true);
+    }
 
-  const details =
-    document.getElementById('weatherDetails');
+    async function loadWeather() {
+      setState(t('weather.loading'));
 
-  try {
+      try {
+        const location = await getLocation();
+        const latitude = location?.latitude ?? 17.608;
+        const longitude = location?.longitude ?? 78.392;
 
-    const location =
-      await getLocation();
+        const data = await getWeatherRisk(latitude, longitude);
 
-    const latitude =
-      location?.latitude ?? 17.608;
+        if (!data || !data.risk_level) {
+          showErrorData();
+          return;
+        }
 
-    const longitude =
-      location?.longitude ?? 78.392;
+        showWeather(data);
+      } catch (error) {
+        console.warn('Weather loading failed:', error);
+        setState(t('weather.unavailableError'), true);
+      }
+    }
 
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-    const data =
-      await getWeatherRisk(
-        latitude,
-        longitude
-      );
+    async function init() {
+      await initI18n();
+      initShell({ page: 'weather' });
+      loadWeather();
+    }
 
-
-    status.innerHTML = `
-      <h2>
-        Disease Risk:
-        ${data.risk || 'Unknown'}
-      </h2>
-    `;
-
-
-    details.innerHTML = `
-
-      <p>
-        <strong>Temperature:</strong>
-        ${data.temperature ?? 'N/A'} °C
-      </p>
-
-      <p>
-        <strong>Relative Humidity:</strong>
-        ${data.relative_humidity ?? 'N/A'} %
-      </p>
-
-      <p>
-        <strong>Rainfall:</strong>
-        ${data.rain ?? 'N/A'} mm
-      </p>
-
-      <p>
-        <strong>Daily Precipitation:</strong>
-        ${data.precipitation_sum ?? 'N/A'} mm
-      </p>
-
-    `;
-
-  } catch (error) {
-
-    status.textContent =
-      `Unable to load weather risk: ${error.message}`;
-
-  }
-
-}
-
-
-loadWeather();
-
-</script>
-
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>

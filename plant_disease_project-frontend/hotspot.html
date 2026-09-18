@@ -1,190 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Map of recorded crop disease scans.">
   <title>Agrigaurd | Disease Hotspots</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link" data-i18n="skip.main">Skip to main content</a>
 
-  <link
-    rel="stylesheet"
-    href="/src/styles.css"
-  >
+  <div id="shell-nav"></div>
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  >
+  <main id="main-content" class="subpage-main" role="main">
+    <div class="container subpage-narrow">
+      <header class="section-header">
+        <h1 class="section-title" data-i18n="hotspot.title">Crop Disease Hotspots</h1>
+        <p class="section-subtitle" data-i18n="hotspot.subtitle">Locations of recorded disease scans.</p>
+      </header>
 
-  <style>
+      <div id="mapState" class="state-msg" role="status" hidden></div>
 
-    #map {
-      width: 100%;
-      height: 600px;
-      border-radius: 16px;
-      overflow: hidden;
+      <section class="scanner-card">
+        <div id="map" class="hotspot-map" role="application" aria-label="Hotspot map"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="shell-footer"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script type="module">
+    import { getScans } from '/src/api.js';
+    import { initI18n, t } from '/src/i18n.js';
+    import { initShell } from '/src/nav.js';
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
-  </style>
+    function setMapState(message, isError = false) {
+      const state = document.getElementById('mapState');
+      if (!state) return;
 
-</head>
+      state.hidden = false;
+      state.className = 'state-msg' + (isError ? ' state-error' : '');
+      state.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>' +
+        escapeHtml(message) + '</span>';
+    }
 
+    function hideMapState() {
+      const state = document.getElementById('mapState');
+      if (state) state.hidden = true;
+    }
 
-<body>
+    const map = L.map('map').setView([17.608, 78.392], 10);
 
-<header class="navbar">
+    L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }
+    ).addTo(map);
 
-  <div class="container navbar-inner">
+    async function loadHotspots() {
+      try {
+        setMapState(t('hotspot.loading'));
 
-    <a href="/" class="navbar-brand">
-      <span class="navbar-title">
-        Agrigaurd
-      </span>
-    </a>
+        const scans = await getScans();
 
-    <nav class="navbar-nav">
+        const located = (scans || []).filter((scan) =>
+          scan.latitude !== null &&
+          scan.latitude !== undefined &&
+          scan.longitude !== null &&
+          scan.longitude !== undefined
+        );
 
-      <a href="/" class="navbar-link">
-        Home
-      </a>
+        if (!located.length) {
+          setMapState(t('hotspot.empty'));
+          return;
+        }
 
-      <a href="/weather.html" class="navbar-link">
-        Weather
-      </a>
+        hideMapState();
 
-      <a href="/advisory.html" class="navbar-link">
-        Advisory
-      </a>
+        located.forEach((scan) => {
+          const confidence = Number.isFinite(Number(scan.confidence))
+            ? `${Math.round(Number(scan.confidence) * 1000) / 10}%`
+            : '—';
 
-    </nav>
+          const statusKey = scan.confirmed === 1
+            ? 'hotspot.confirmed'
+            : scan.confirmed === 0
+              ? 'hotspot.notConfirmed'
+              : 'hotspot.notReviewed';
 
-  </div>
-
-</header>
-
-
-<main class="container" style="padding: 48px 20px;">
-
-  <header class="section-header">
-
-    <h1 class="section-title">
-      Crop Disease Hotspots
-    </h1>
-
-    <p class="section-subtitle">
-      Locations of recorded disease scans.
-    </p>
-
-  </header>
-
-
-  <section class="scanner-card">
-
-    <div id="map"></div>
-
-  </section>
-
-</main>
-
-
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-</script>
-
-
-<script type="module">
-
-import {
-  getScans
-} from '/src/api.js';
-
-
-const map =
-  L.map('map').setView(
-    [17.608, 78.392],
-    10
-  );
-
-
-L.tileLayer(
-  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {
-    maxZoom: 19,
-    attribution:
-      '&copy; OpenStreetMap contributors'
-  }
-).addTo(map);
-
-
-async function loadHotspots() {
-
-  try {
-
-    const scans =
-      await getScans();
-
-
-    scans
-      .filter(scan =>
-        scan.latitude !== null &&
-        scan.longitude !== null
-      )
-      .forEach(scan => {
-
-        const marker =
-          L.marker([
+          const marker = L.marker([
             scan.latitude,
             scan.longitude
           ]).addTo(map);
 
+          marker.bindPopup(`
+            <strong>${escapeHtml(scan.disease || t('hotspot.unknown'))}</strong>
+            <br>
+            ${escapeHtml(t('hotspot.confidence'))}: ${confidence}
+            <br>
+            ${escapeHtml(t(statusKey))}
+            <br>
+            ${escapeHtml(scan.created_at || '')}
+          `);
+        });
+      } catch (error) {
+        console.warn('Hotspot loading failed:', error);
+        setMapState(t('hotspot.error'), true);
+      }
+    }
 
-        marker.bindPopup(`
-          <strong>
-            ${scan.disease || 'Unknown'}
-          </strong>
-          <br>
-          Confidence:
-          ${
-            Number(scan.confidence * 100)
-              .toFixed(1)
-          }%
-          <br>
-          ${
-            scan.confirmed === 1
-              ? 'Confirmed'
-              : scan.confirmed === 0
-                ? 'Not confirmed'
-                : 'Not reviewed'
-          }
-          <br>
-          ${
-            scan.created_at || ''
-          }
-        `);
+    async function init() {
+      await initI18n();
+      initShell({ page: 'hotspots' });
+      loadHotspots();
+    }
 
-      });
-
-  } catch (error) {
-
-    console.error(
-      'Hotspot loading failed:',
-      error
-    );
-
-  }
-
-}
-
-
-loadHotspots();
-
-</script>
-
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>

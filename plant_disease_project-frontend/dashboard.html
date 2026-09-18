@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Disease detection statistics for agricultural officers.">
+  <title>Agrigaurd | Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link" data-i18n="skip.main">Skip to main content</a>
+
+  <div id="shell-nav"></div>
+
+  <main id="main-content" class="subpage-main" role="main">
+    <div class="container">
+      <header class="section-header">
+        <h1 class="section-title" data-i18n="dashboard.title">Dashboard</h1>
+        <p class="section-subtitle" data-i18n="dashboard.subtitle">Statistics collected from farmer scans.</p>
+      </header>
+
+      <div id="dashboardState" class="dashboard-state" role="status" hidden></div>
+
+      <div id="dashboardContent" hidden>
+        <section class="stat-grid" aria-label="Summary">
+          <div class="stat-card">
+            <span class="stat-value" id="statTotal">0</span>
+            <span class="stat-label" data-i18n="dashboard.totalScans">Total Scans</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="statPending">0</span>
+            <span class="stat-label" data-i18n="dashboard.pendingConfirmations">Pending Confirmations</span>
+          </div>
+        </section>
+
+        <section class="dashboard-section" aria-labelledby="diseaseFreqTitle">
+          <h2 id="diseaseFreqTitle" data-i18n="dashboard.diseaseFrequency">Disease Frequency</h2>
+          <div id="diseaseBars" class="bar-list"></div>
+        </section>
+
+        <section class="dashboard-section" aria-labelledby="districtTitle">
+          <h2 id="districtTitle" data-i18n="dashboard.districts">District Statistics</h2>
+          <div id="districtTableWrap"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div id="shell-footer"></div>
+
+  <script type="module" src="/src/dashboard.js"></script>
+</body>
+</html>
